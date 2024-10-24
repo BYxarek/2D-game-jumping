@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Мини-игра: Прыжки через препятствия</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                overflow: hidden;
+                background: url('fon.webp') no-repeat center center fixed;
+                background-size: cover;
+            }
+            #game {
+                position: relative;
+                width: 100vw;
+                height: 100vh;
+                border: 1px solid #000;
+                overflow: hidden;
+            }
+            #player {
+                position: absolute;
+                bottom: 0;
+                width: 100px; /* Increased size */
+                height: 100px; /* Increased size */
+                background: url('user.gif') no-repeat center center;
+                background-size: contain;
+            }
+            .obstacle {
+                position: absolute;
+                bottom: 0;
+                width: 100px; /* Increased size */
+                height: 50px; /* Increased size */
+                background: url('ops.jpg') no-repeat center center;
+                background-size: contain;
+            }
+            #score {
+                font-size: 24px;
+                position: absolute;
+                top: 10px;
+                left: 10px;
+            }
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 1;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgb(0, 0, 0);
+                background-color: rgba(0, 0, 0, 0.4);
+            }
+            .modal-content {
+                background-color: #fefefe;
+                margin: 15% auto;
+                padding: 20px;
+                border: 1px solid #888;
+                width: 80%;
+                text-align: center;
+            }
+            .replay-btn {
+                margin-top: 20px;
+                padding: 10px 20px;
+                background-color: #4caf50;
+                color: white;
+                border: none;
+                cursor: pointer;
+            }
+            .replay-btn:hover {
+                background-color: #45a049;
+            }
+            .start-modal {
+                display: block;
+                position: fixed;
+                z-index: 2;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgb(0, 0, 0);
+                background-color: rgba(0, 0, 0, 0.4);
+            }
+            .start-modal-content {
+                background-color: #fefefe;
+                margin: 15% auto;
+                padding: 20px;
+                border: 1px solid #888;
+                width: 80%;
+                text-align: center;
+            }
+            .start-btn {
+                margin-top: 20px;
+                padding: 10px 20px;
+                background-color: #4caf50;
+                color: white;
+                border: none;
+                cursor: pointer;
+            }
+            .start-btn:hover {
+                background-color: #45a049;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="game">
+            <p id="score">Счет: 0</p>
+            <div id="fps" style="position: absolute; top: 10px; right: 10px; font-size: 24px;">FPS: 0</div>
+            <div id="player" style="bottom: 0;"></div>
+        </div>
+
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+                <p>Игра окончена!</p>
+                <p>Итоговый счёт: <span id="finalScore"></span></p>
+                <button class="replay-btn" id="replayBtn">Играть ещё раз</button>
+            </div>
+        </div>
+
+        <div id="startModal" class="start-modal">
+            <div class="start-modal-content">
+                <h1>Мини-игра: Прыжки через препятствия</h1>
+                <p>Описание игры: Прыгайте через препятствия и набирайте очки!</p>
+                <p>Как играть: Нажмите пробел или кликните, чтобы прыгнуть.</p>
+                <button class="start-btn" id="startBtn">Начать игру</button>
+            </div>
+        </div>
+
+        <script>
+            let score = 0;
+            document.getElementById("score").innerText = "Счет: " + score;
+
+            const game = document.getElementById("game");
+            const player = document.getElementById("player");
+            let isJumping = false;
+            let gravity = 0.9;
+            let obstacles = [];
+            let gamePaused = true;
+
+            function jump() {
+                if (isJumping || gamePaused) return;
+                isJumping = true;
+                let jumpCount = 0;
+                const jumpInterval = setInterval(() => {
+                    if (jumpCount > 35) {
+                        clearInterval(jumpInterval);
+                        const fallInterval = setInterval(() => {
+                            if (jumpCount === 0) {
+                                clearInterval(fallInterval);
+                                isJumping = false;
+                            }
+                            let newBottom = parseInt(player.style.bottom) - 5;
+                            if (newBottom < 0) newBottom = 0;
+                            player.style.bottom = `${newBottom}px`;
+                            jumpCount--;
+                        }, 20);
+                    }
+                    player.style.bottom = `${parseInt(player.style.bottom) + 5}px`;
+                    jumpCount++;
+                }, 20);
+            }
+
+            function createObstacle() {
+                if (gamePaused) return;
+                const obstacle = document.createElement("div");
+                obstacle.classList.add("obstacle");
+                obstacle.style.left = "1500vw";
+                game.appendChild(obstacle);
+                obstacles.push(obstacle);
+
+                const moveObstacle = setInterval(() => {
+                    if (gamePaused) {
+                        clearInterval(moveObstacle);
+                        return;
+                    }
+                    if (parseInt(obstacle.style.left) < -20) {
+                        clearInterval(moveObstacle);
+                        game.removeChild(obstacle);
+                        obstacles.shift();
+                        score++;
+                        document.getElementById("score").innerText = "Счет: " + score;
+                    }
+                    obstacle.style.left = `${parseInt(obstacle.style.left) - 5}px`;
+
+                    if (parseInt(obstacle.style.left) < 75 && parseInt(obstacle.style.left) > 0 && parseInt(player.style.bottom) < 50) {
+                        document.getElementById("finalScore").textContent = score;
+                        document.getElementById("myModal").style.display = "block";
+                        gamePaused = true;
+                    }
+                }, 20);
+            }
+
+            setInterval(createObstacle, 3000); // Изменряется в милисекундах
+
+            document.addEventListener("keydown", function (event) {
+                if (event.code === "Space") {
+                    jump();
+                }
+            });
+
+            game.addEventListener("click", function () {
+                jump();
+            });
+
+            document.getElementById("replayBtn").onclick = function () {
+                location.reload();
+            };
+
+            document.getElementById("startBtn").onclick = function () {
+                document.getElementById("startModal").style.display = "none";
+                gamePaused = false;
+            };
+
+            let lastFrameTime = performance.now();
+            let frameCount = 0;
+            let fps = 0;
+
+            function updateFPS() {
+                const now = performance.now();
+                frameCount++;
+                if (now - lastFrameTime >= 1000) {
+                    fps = frameCount;
+                    frameCount = 0;
+                    lastFrameTime = now;
+                    document.getElementById("fps").innerText = `FPS: ${fps}`;
+                }
+                requestAnimationFrame(updateFPS);
+            }
+
+            updateFPS();
+            setInterval(updatePING, 1000);
+        </script>
+    </body>
+</html>
